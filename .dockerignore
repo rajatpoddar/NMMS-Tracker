@@ -1,0 +1,17 @@
+# Never send these to Docker build context — keeps build fast
+node_modules
+.next
+.git
+.env
+.env.local
+*.db
+*.db-journal
+
+# Dev files
+README.md
+.gitignore
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
