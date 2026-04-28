@@ -1,0 +1,13 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+TZ=Asia/Kolkata
+PHOTOS_DIR=/app/data/photos
+
+# ┌─── minute (0-59)
+# │  ┌── hour in IST (0-23)
+# │  │  ┌─ day of month
+# │  │  │  ┌ month
+# │  │  │  │  ┌ day of week (0=Sunday)
+# │  │  │  │  │
+# 30  6  *  *  *   → 06:30 IST every day
+30 6 * * * root PHOTOS_DIR=/app/data/photos python3 /app/scraper/scraper.py --api-url http://webapp:3000 >> /var/log/scraper/scraper.log 2>&1

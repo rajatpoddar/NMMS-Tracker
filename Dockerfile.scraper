@@ -1,0 +1,44 @@
+FROM python:3.12-slim
+
+# ── Timezone: IST ──────────────────────────────────────────────────────────────
+ENV TZ=Asia/Kolkata
+RUN apt-get update && apt-get install -y tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone
+
+# ── System deps for Playwright + cron ─────────────────────────────────────────
+RUN apt-get install -y \
+    wget curl gnupg ca-certificates cron \
+    libglib2.0-0 libnss3 libnspr4 libdbus-1-3 \
+    libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+    libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
+    libxfixes3 libxrandr2 libgbm1 libasound2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/scraper
+
+# ── Python deps ────────────────────────────────────────────────────────────────
+COPY scraper/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── Playwright ─────────────────────────────────────────────────────────────────
+RUN playwright install chromium
+RUN playwright install-deps chromium
+
+# ── Copy scraper ───────────────────────────────────────────────────────────────
+COPY scraper/scraper.py .
+
+# ── Directories ────────────────────────────────────────────────────────────────
+RUN mkdir -p /app/data/photos /var/log/scraper
+
+# ── Cron job ───────────────────────────────────────────────────────────────────
+# Runs at 06:30 IST every day (TZ=Asia/Kolkata is set in environment)
+# MGNREGA portal data is usually available by 6 AM IST
+# We wait 30 min extra to ensure data is fully populated
+COPY scraper/crontab.txt /etc/cron.d/nmms-scraper
+RUN chmod 0644 /etc/cron.d/nmms-scraper \
+    && crontab /etc/cron.d/nmms-scraper
+
+RUN touch /var/log/scraper/scraper.log
+
+CMD ["cron", "-f"]

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+
+# Production
+build/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files (never commit real secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+# .env.example is committed intentionally (no real secrets)
+
+# SQLite database (no longer used in production)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Downloaded photos (stored on volume, not in repo)
+public/photos/*.jpeg
+public/photos/*.jpg
+public/photos/*.png
+!public/photos/sample_photo1.jpeg
+!public/photos/sample_photo2.jpeg
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

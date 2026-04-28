@@ -1,0 +1,81 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NMMS Tracker — Production Docker Compose
+# Port: 4782 (webapp)  |  Timezone: Asia/Kolkata (IST)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── PostgreSQL Database ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: nmms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nmms_db
+      POSTGRES_USER: nmms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-NmmsSecure@2026}
+      TZ: Asia/Kolkata
+      PGTZ: Asia/Kolkata
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nmms -d nmms_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    # Postgres not exposed externally — only accessible within Docker network
+
+  # ── Next.js Web App ──────────────────────────────────────────────────────────
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nmms-webapp
+    restart: unless-stopped
+    ports:
+      - "4782:3000"          # Host port 4782 → container 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://nmms:${POSTGRES_PASSWORD:-NmmsSecure@2026}@postgres:5432/nmms_db
+      PHOTOS_DIR: /app/data/photos
+      NEXT_TELEMETRY_DISABLED: "1"
+      TZ: Asia/Kolkata
+    volumes:
+      - photos_data:/app/data/photos
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/dashboard?date=2026-01-01"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ── Python Scraper (cron-based) ──────────────────────────────────────────────
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.scraper
+    container_name: nmms-scraper
+    restart: unless-stopped
+    depends_on:
+      webapp:
+        condition: service_healthy
+    environment:
+      API_URL: http://webapp:3000
+      PHOTOS_DIR: /app/data/photos
+      TZ: Asia/Kolkata
+    volumes:
+      - photos_data:/app/data/photos
+      - scraper_logs:/var/log/scraper
+
+volumes:
+  pg_data:
+    driver: local
+  photos_data:
+    driver: local
+  scraper_logs:
+    driver: local

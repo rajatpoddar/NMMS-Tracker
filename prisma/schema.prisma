@@ -1,0 +1,76 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ScrapeLog {
+  id          Int      @id @default(autoincrement())
+  scrapeDate  String   // "YYYY-MM-DD"
+  status      String   // "success" | "partial" | "failed"
+  totalMRs    Int      @default(0)
+  message     String?
+  createdAt   DateTime @default(now())
+}
+
+model MusterRoll {
+  id              Int       @id @default(autoincrement())
+  attendanceDate  String    // "YYYY-MM-DD"
+  stateCode       String    @default("34")
+  stateName       String    @default("JHARKHAND")
+  districtCode    String
+  districtName    String
+  blockCode       String
+  blockName       String
+  panchayatCode   String
+  panchayatName   String
+  workCode        String
+  msrNo           String
+  workName        String?
+  detailUrl       String
+  // Group photo metadata
+  photo1Url       String?
+  photo1TakenAt   String?
+  photo1UploadedAt String?
+  photo1Coords    String?
+  photo1TakenBy   String?
+  photo1Designation String?
+  photo2Url       String?
+  photo2TakenAt   String?
+  photo2UploadedAt String?
+  photo2Coords    String?
+  // Aggregates (denormalized for fast KPI queries)
+  totalWorkers    Int       @default(0)
+  presentCount    Int       @default(0)
+  absentCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workers         Worker[]
+
+  @@unique([attendanceDate, workCode, msrNo])
+  @@index([attendanceDate])
+  @@index([panchayatCode])
+  @@index([attendanceDate, panchayatCode])
+}
+
+model Worker {
+  id              Int        @id @default(autoincrement())
+  musterRollId    Int
+  sno             Int
+  jobCardNo       String
+  workerName      String
+  gender          String?    // "M" | "F"
+  attendanceDate  String
+  isPresent       Boolean
+  createdAt       DateTime   @default(now())
+
+  musterRoll      MusterRoll @relation(fields: [musterRollId], references: [id], onDelete: Cascade)
+
+  @@index([musterRollId])
+  @@index([attendanceDate])
+}
