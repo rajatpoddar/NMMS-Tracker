@@ -388,19 +388,6 @@ def update_progress(api_url: str, scrape_log_id: int, processed: int, total: int
         log.debug(f"Progress update failed (non-fatal): {e}")
 
 
-def push_progress(api_url: str, date_iso: str, total: int, processed: int, failed: int):
-    """Update scrape progress in the webapp DB."""
-    endpoint = f"{api_url.rstrip('/')}/api/scrape/progress"
-    try:
-        requests.post(
-            endpoint,
-            json={"date": date_iso, "total": total, "processed": processed, "failed": failed},
-            headers={"Content-Type": "application/json"},
-            timeout=5,
-        )
-    except Exception:
-        pass  # progress update is best-effort
-
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -410,6 +397,8 @@ def main():
                         help="Date to scrape (YYYY-MM-DD), default: today")
     parser.add_argument("--api-url", default="http://localhost:3000",
                         help="Base URL of the Next.js API")
+    parser.add_argument("--scrape-log-id", type=int, default=0,
+                        help="ScrapeLog ID for live progress updates")
     parser.add_argument("--use-playwright", action="store_true",
                         help="Force Playwright (slower but handles JS)")
     parser.add_argument("--dry-run", action="store_true",
@@ -417,9 +406,12 @@ def main():
     args = parser.parse_args()
 
     date_iso = args.date
+    scrape_log_id = args.scrape_log_id
     log.info(f"Starting scrape for date: {date_iso}")
     log.info(f"API URL: {args.api_url}")
     log.info(f"Photos dir: {PHOTOS_DIR}")
+    if scrape_log_id:
+        log.info(f"ScrapeLog ID: {scrape_log_id}")
 
     ensure_photos_dir()
 
@@ -447,6 +439,9 @@ def main():
     total_mr_count = len(mr_list)
     log.info(f"Processing {total_mr_count} MRs...")
 
+    # Push total count immediately so UI can show ETA
+    update_progress(args.api_url, scrape_log_id, 0, total_mr_count, 0)
+
     # ── Steps B+C: Fetch each detail page + download photos ──
     batch = []
     total_processed = 0
@@ -462,8 +457,7 @@ def main():
         if not detail_html:
             log.warning(f"  Skipping MR {mr_meta['msrNo']} – could not fetch detail page")
             total_failed += 1
-            if not args.dry_run and i % 10 == 0:
-                push_progress(args.api_url, date_iso, total_mr_count, total_processed, total_failed)
+            update_progress(args.api_url, scrape_log_id, total_processed, total_mr_count, total_failed)
             continue
 
         mr_data = scrape_mr_detail(date_iso, detail_html, mr_meta)
@@ -473,10 +467,10 @@ def main():
         if len(batch) >= BATCH_SIZE:
             if not args.dry_run:
                 push_to_api(args.api_url, batch)
-                push_progress(args.api_url, date_iso, total_mr_count, total_processed, total_failed)
             else:
                 log.info(f"  [dry-run] Would push {len(batch)} records")
             batch = []
+            update_progress(args.api_url, scrape_log_id, total_processed, total_mr_count, total_failed)
 
         time.sleep(REQUEST_DELAY)
 
@@ -486,6 +480,7 @@ def main():
         else:
             log.info(f"  [dry-run] Would push {len(batch)} records")
 
+    update_progress(args.api_url, scrape_log_id, total_processed, total_mr_count, total_failed)
     log.info(f"Done. Processed: {total_processed}, Failed: {total_failed}")
 
 
