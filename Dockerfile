@@ -11,9 +11,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY prisma ./prisma
 
-# Generate Prisma client + download engines for linux-musl (alpine)
-ENV PRISMA_CLI_QUERY_ENGINE_TYPE=binary
-ENV PRISMA_CLIENT_ENGINE_TYPE=binary
+# Generate Prisma client for all Alpine variants (linux-musl + linux-musl-openssl-3.0.x)
 RUN npx prisma generate
 
 COPY . .
@@ -29,9 +27,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV TZ=Asia/Kolkata
-# Tell Prisma to use binary engine (pre-downloaded, no runtime download needed)
-ENV PRISMA_CLI_QUERY_ENGINE_TYPE=binary
-ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 
 # Timezone + openssl (required by Prisma on alpine)
 RUN apk add --no-cache tzdata openssl \
