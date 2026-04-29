@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Copy scraper ───────────────────────────────────────────────────────────────
 COPY scraper/scraper.py .
+COPY scraper/trigger_server.py .
 
 # ── Directories ────────────────────────────────────────────────────────────────
 RUN mkdir -p /app/data/photos /var/log/scraper
@@ -29,4 +30,9 @@ RUN chmod 0644 /etc/cron.d/nmms-scraper \
 
 RUN touch /var/log/scraper/scraper.log
 
-CMD ["cron", "-f"]
+# ── Startup: run both cron and trigger server ──────────────────────────────────
+COPY scraper/start.sh /app/scraper/start.sh
+RUN chmod +x /app/scraper/start.sh
+
+EXPOSE 5000
+CMD ["/app/scraper/start.sh"]

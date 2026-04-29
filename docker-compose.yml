@@ -45,6 +45,7 @@ services:
       PHOTOS_DIR: /app/data/photos
       NEXT_TELEMETRY_DISABLED: "1"
       TZ: Asia/Kolkata
+      SCRAPER_URL: http://scraper:5000
     volumes:
       - photos_data:/app/data/photos
     healthcheck:
@@ -71,6 +72,12 @@ services:
     volumes:
       - photos_data:/app/data/photos
       - scraper_logs:/var/log/scraper
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   pg_data:

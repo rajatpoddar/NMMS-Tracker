@@ -372,6 +372,36 @@ def push_to_api(api_url: str, batch: list[dict]) -> bool:
         return False
 
 
+def update_progress(api_url: str, scrape_log_id: int, processed: int, total: int, failed: int) -> None:
+    """Push live progress to the webapp so the UI can show a progress bar."""
+    if not scrape_log_id:
+        return
+    endpoint = f"{api_url.rstrip('/')}/api/scrape/progress"
+    try:
+        requests.patch(
+            endpoint,
+            json={"scrapeLogId": scrape_log_id, "processedMRs": processed, "totalMRs": total, "failedMRs": failed},
+            headers={"Content-Type": "application/json"},
+            timeout=5,
+        )
+    except Exception as e:
+        log.debug(f"Progress update failed (non-fatal): {e}")
+
+
+def push_progress(api_url: str, date_iso: str, total: int, processed: int, failed: int):
+    """Update scrape progress in the webapp DB."""
+    endpoint = f"{api_url.rstrip('/')}/api/scrape/progress"
+    try:
+        requests.post(
+            endpoint,
+            json={"date": date_iso, "total": total, "processed": processed, "failed": failed},
+            headers={"Content-Type": "application/json"},
+            timeout=5,
+        )
+    except Exception:
+        pass  # progress update is best-effort
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -414,7 +444,8 @@ def main():
         log.warning("No MRs found. The portal may have no data for this date.")
         sys.exit(0)
 
-    log.info(f"Processing {len(mr_list)} MRs...")
+    total_mr_count = len(mr_list)
+    log.info(f"Processing {total_mr_count} MRs...")
 
     # ── Steps B+C: Fetch each detail page + download photos ──
     batch = []
@@ -422,7 +453,7 @@ def main():
     total_failed = 0
 
     for i, mr_meta in enumerate(mr_list, 1):
-        log.info(f"[{i}/{len(mr_list)}] MR {mr_meta['msrNo']} – {mr_meta['panchayatName']}")
+        log.info(f"[{i}/{total_mr_count}] MR {mr_meta['msrNo']} – {mr_meta['panchayatName']}")
 
         detail_html = fetch_with_requests(mr_meta["detailUrl"])
         if not detail_html:
@@ -431,6 +462,8 @@ def main():
         if not detail_html:
             log.warning(f"  Skipping MR {mr_meta['msrNo']} – could not fetch detail page")
             total_failed += 1
+            if not args.dry_run and i % 10 == 0:
+                push_progress(args.api_url, date_iso, total_mr_count, total_processed, total_failed)
             continue
 
         mr_data = scrape_mr_detail(date_iso, detail_html, mr_meta)
@@ -440,6 +473,7 @@ def main():
         if len(batch) >= BATCH_SIZE:
             if not args.dry_run:
                 push_to_api(args.api_url, batch)
+                push_progress(args.api_url, date_iso, total_mr_count, total_processed, total_failed)
             else:
                 log.info(f"  [dry-run] Would push {len(batch)} records")
             batch = []

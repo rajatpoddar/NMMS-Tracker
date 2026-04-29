@@ -10,12 +10,18 @@ datasource db {
 }
 
 model ScrapeLog {
-  id          Int      @id @default(autoincrement())
-  scrapeDate  String   // "YYYY-MM-DD"
-  status      String   // "success" | "partial" | "failed"
-  totalMRs    Int      @default(0)
-  message     String?
-  createdAt   DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  scrapeDate    String   // "YYYY-MM-DD"
+  status        String   // "running" | "success" | "partial" | "failed"
+  totalMRs      Int      @default(0)   // total found on portal
+  processedMRs  Int      @default(0)   // done so far
+  failedMRs     Int      @default(0)
+  message       String?
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([scrapeDate])
 }
 
 model MusterRoll {
