@@ -48,11 +48,11 @@ services:
     volumes:
       - photos_data:/app/data/photos
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/dashboard?date=2026-01-01"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/dashboard?date=2026-01-01', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
   # ── Python Scraper (cron-based) ──────────────────────────────────────────────
   scraper:
