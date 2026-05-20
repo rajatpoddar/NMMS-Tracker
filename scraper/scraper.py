@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 # ─── Config ───────────────────────────────────────────────────────────────────
-BASE_URL = "https://mnregaweb4.nic.in/netnrega"
+BASE_URL = "https://mnregaweb4.dord.gov.in/netnrega"
 LIST_URL = f"{BASE_URL}/View_NMMS_atten_date_dtl.aspx"
 
 STATE_CODE = "34"
