@@ -32,7 +32,7 @@ LIST_URL = f"{BASE_URL}/View_NMMS_atten_date_dtl.aspx"
 STATE_CODE = "34"
 STATE_NAME = "JHARKHAND"
 STATE_SHORT = "JH"
-FIN_YEAR = "2025-2026"
+FIN_YEAR = "2026-2027"
 
 BATCH_SIZE = 10          # MRs per API POST batch
 REQUEST_DELAY = 1.5      # seconds between detail page requests
